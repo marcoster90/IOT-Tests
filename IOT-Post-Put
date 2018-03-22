@@ -1,0 +1,90 @@
+#include <ArduinoJson.h>
+#include <ESP8266HTTPClient.h>
+#include <ESP8266WiFi.h>
+// Incluimos librería
+#include <DHT.h>
+// Definimos el pin digital donde se conecta el sensor
+#define DHTPIN 5
+// Dependiendo del tipo de sensor
+#define DHTTYPE DHT11
+const char* ssid ="";
+const char* password ="";
+
+byte ip[] = {192, 168, 1, 85};
+const char* host = "http://192.168.1.85:80";
+const size_t bufferSize = JSON_ARRAY_SIZE(4) + 20;
+const char* url = "/api/get4switch_ports1";
+const char* url2 = "/api/post_data_ports12";
+//Variables de identificacion para el JSON
+const char* device_name="";
+const char* device_description ="";
+String device_mac;
+
+// Inicializamos el sensor DHT11
+DHT dht(DHTPIN, DHTTYPE);
+void setup() {
+  Serial.begin(115200);
+  dht.begin();
+  Serial.println();
+  Serial.print("Conectando a ");
+  Serial.print(ssid);
+  Serial.println();
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.println(".");
+  }
+  Serial.println();
+  Serial.println("Conexion a wifi");
+  Serial.println("Con direccion:");
+  Serial.print(WiFi.localIP());
+
+}
+
+void loop() {
+  HTTPClient http;
+  float t = dht.readTemperature();
+  float h = dht.readHumidity();
+  delay(50);
+  //aqui va el codigo copiado
+  String myURL =String(host) + String(url);
+  http.begin(myURL);
+  http.addHeader("content-type: ","application/json");
+  int httpCode = http.GET();
+  String payload = http.getString();
+  http.end();
+
+  //Serial.println(WiFi.macAddress());
+  DynamicJsonBuffer jsonBuffer(bufferSize);
+  JsonArray& root = jsonBuffer.parseArray(payload);
+  JsonArray& root_ = root;
+
+  int port_0 = root[0];
+  int port_1 = root[1];
+  int port_2 = root[2];
+  int port_3 = root[3];
+
+  Serial.println(port_0);
+  Serial.println(port_1);
+  Serial.println(port_2);
+  Serial.println(port_3);
+
+
+  Serial.println("Status : " +String(WiFi.status()==WL_CONNECTED));
+  //hacerPut();
+  delay(500);
+  HTTPClient http2;
+  String myURL2 =String(host) + String(url2);
+  http2.begin(myURL2);      //Specify request destination
+  http2.addHeader("Content-Type","application/x-www-form-urlencoded");  //Specify content-type header application/json
+  String menssaje = "{message:\"Hola \"}";
+  int httpCode2 = http2.POST(menssaje);
+  String payload2 = http2.getString();
+  http2.end();
+  Serial.println(menssaje);
+  Serial.println(myURL2);
+  Serial.println(httpCode2);
+  Serial.println(payload2);
+  delay(100);
+}
